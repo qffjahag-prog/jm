@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>التحقق من الهوية — متجري</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:       #0D1117;
+      --surface:   #F7F8FA;
+      --card:      #FFFFFF;
+      --accent:    #1A56DB;
+      --accent-lt: #EBF0FD;
+      --success:   #0B9C5A;
+      --success-lt:#E6F7F0;
+      --warn:      #D97706;
+      --warn-lt:   #FEF3C7;
+      --error:     #DC2626;
+      --error-lt:  #FEE2E2;
+      --border:    #E5E7EB;
+      --muted:     #6B7280;
+      --radius:    14px;
+      --shadow:    0 2px 16px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--surface);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 48px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      width: 100%;
+      max-width: 560px;
+      padding: 32px 0 24px;
+      text-align: center;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: -.4px;
+    }
+    .logo svg { width: 34px; height: 34px; }
+    header p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── STEPS ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 0 auto 28px;
+      max-width: 400px;
+      width: 100%;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      position: relative;
+      z-index: 1;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      left: -50%;
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      z-index: -1;
+    }
+    .step.done:not(:last-child)::after { background: var(--accent); }
+    .step-dot {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--muted);
+      transition: background .3s, color .3s;
+    }
+    .step.active .step-dot { background: var(--accent); color: #fff; }
+    .step.done .step-dot { background: var(--success); color: #fff; }
+    .step-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .step.active .step-label { color: var(--accent); }
+    .step.done .step-label  { color: var(--success); }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── INTRO ── */
+    .intro-icon {
+      width: 64px; height: 64px;
+      background: var(--accent-lt);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .intro-icon svg { width: 32px; height: 32px; color: var(--accent); }
+    h2 { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; margin-bottom: 24px; }
+
+    .checklist {
+      background: var(--accent-lt);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 28px;
+      list-style: none;
+    }
+    .checklist li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 13.5px; padding: 6px 0;
+      border-bottom: 1px solid rgba(26,86,219,.1);
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li::before { content: '✓'; color: var(--accent); font-weight: 700; margin-top: 1px; }
+
+    /* ── CAMERA ── */
+    .cam-wrapper {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0D1117;
+      aspect-ratio: 4/3;
+      margin-bottom: 20px;
+    }
+    #video, #canvas {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    #canvas { display: none; }
+
+    .cam-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .face-guide {
+      width: 160px; height: 200px;
+      border: 3px solid rgba(255,255,255,.6);
+      border-radius: 50% / 45%;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.35);
+    }
+    .cam-hint {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.55);
+      color: #fff;
+      font-size: 12px; font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    /* status badge */
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 18px;
+    }
+    .status-badge.info    { background: var(--accent-lt); color: var(--accent); }
+    .status-badge.success { background: var(--success-lt); color: var(--success); }
+    .status-badge.error   { background: var(--error-lt);   color: var(--error); }
+    .status-badge.warn    { background: var(--warn-lt);    color: var(--warn); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+    /* ── PREVIEW ── */
+    .preview-img {
+      width: 100%; border-radius: 10px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 18px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    input[type=text], input[type=email], input[type=tel] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+      background: var(--surface);
+      direction: rtl;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .consent-box {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      padding: 13px;
+      margin-bottom: 22px;
+      cursor: pointer;
+    }
+    .consent-box input[type=checkbox] {
+      width: 18px; height: 18px; accent-color: var(--accent);
+      flex-shrink: 0; margin-top: 2px; cursor: pointer;
+    }
+    .consent-box span { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+    .consent-box a { color: var(--accent); }
+
+    /* ── SUCCESS ── */
+    .success-icon {
+      width: 72px; height: 72px;
+      background: var(--success-lt);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-icon svg { width: 36px; height: 36px; color: var(--success); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 9px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-success   { background: var(--success); color: #fff; }
+    .btn-outline   { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+    .btn-ghost     { background: var(--surface); color: var(--muted); border: 1.5px solid var(--border); }
+    .btn + .btn    { margin-top: 10px; }
+
+    /* ── PRIVACY NOTE ── */
+    .privacy-note {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+      margin-top: 18px; justify-content: center;
+    }
+    .privacy-note svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* LOADER */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#">
+    <svg viewBox="0 0 40 40" fill="none">
+      <rect width="40" height="40" rx="10" fill="#1A56DB"/>
+      <path d="M12 28L20 12L28 28" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20" cy="20" r="3" fill="#fff"/>
+    </svg>
+    متجري
+  </a>
+  <p>التحقق من هوية المشترك الجديد</p>
+</header>
+
+<!-- STEPS -->
+<div class="steps" id="stepsBar">
+  <div class="step active" id="step1">
+    <div class="step-dot">١</div>
+    <div class="step-label">البداية</div>
+  </div>
+  <div class="step" id="step2">
+    <div class="step-dot">٢</div>
+    <div class="step-label">الصورة</div>
+  </div>
+  <div class="step" id="step3">
+    <div class="step-dot">٣</div>
+    <div class="step-label">البيانات</div>
+  </div>
+  <div class="step" id="step4">
+    <div class="step-dot">٤</div>
+    <div class="step-label">تم</div>
+  </div>
+</div>
+
+<div class="card">
+
+  <!-- ── SECTION 1: INTRO ── -->
+  <div class="section active" id="sec-intro">
+    <div class="intro-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </div>
+    <h2>التحقق من هويتك</h2>
+    <p class="subtitle">للاشتراك في متجري نحتاج التحقق من هويتك بسرعة وأمان عبر صورة شخصية واضحة.</p>
+
+    <ul class="checklist">
+      <li>احرص أن يكون وجهك واضحًا وغير مغطى</li>
+      <li>تأكد من الإضاءة الجيدة في المكان</li>
+      <li>ابتعد عن الخلفيات الصاخبة</li>
+      <li>لا تضع نظارة شمسية أثناء التصوير</li>
+    </ul>
+
+    <button class="btn btn-primary" onclick="startCamera()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      السماح للكاميرا والبدء
+    </button>
+
+    <p class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      صورتك محمية ولن تُشارك مع أي طرف ثالث
+    </p>
+  </div>
+
+  <!-- ── SECTION 2: CAMERA ── -->
+  <div class="section" id="sec-camera">
+    <h2 style="margin-bottom:6px">التقط صورتك</h2>
+    <p class="subtitle" style="margin-bottom:16px">ضع وجهك داخل الإطار البيضاوي ثم اضغط التقاط.</p>
+
+    <div id="statusBadge" class="status-badge info">
+      <div class="status-dot"></div>
+      <span id="statusText">جاري تشغيل الكاميرا…</span>
+    </div>
+
+    <div class="cam-wrapper">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="cam-overlay">
+        <div class="face-guide"></div>
+      </div>
+      <div class="cam-hint">ضع وجهك هنا</div>
+    </div>
+
+    <button class="btn btn-primary" id="captureBtn" onclick="capturePhoto()" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      التقاط الصورة
+    </button>
+    <button class="btn btn-ghost" onclick="goBack('sec-intro', 1)" style="margin-top:10px">رجوع</button>
+  </div>
+
+  <!-- ── SECTION 3: PREVIEW + FORM ── -->
+  <div class="section" id="sec-form">
+    <h2 style="margin-bottom:6px">مراجعة وإكمال البيانات</h2>
+    <p class="subtitle" style="margin-bottom:16px">تأكد من وضوح الصورة، ثم أدخل بياناتك.</p>
+
+    <img id="previewImg" class="preview-img" alt="صورتك الشخصية" />
+
+    <button class="btn btn-outline" onclick="retake()" style="margin-bottom:22px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+      إعادة الالتقاط
+    </button>
+
+    <div class="field">
+      <label for="fullname">الاسم الكامل</label>
+      <input type="text" id="fullname" placeholder="مثال: أحمد محمد العمري" />
+    </div>
+    <div class="field">
+      <label for="email">البريد الإلكتروني</label>
+      <input type="email" id="email" placeholder="example@email.com" dir="ltr" />
+    </div>
+    <div class="field">
+      <label for="phone">رقم الجوال</label>
+      <input type="tel" id="phone" placeholder="05xxxxxxxx" dir="ltr" />
+    </div>
+
+    <label class="consent-box">
+      <input type="checkbox" id="consentCheck" onchange="toggleSubmit()" />
+      <span>أوافق على <a href="#">سياسة الخصوصية</a> وأذن بمعالجة صورتي بشكل آمن للتحقق من هويتي لأغراض الاشتراك في متجري.</span>
+    </label>
+
+    <button class="btn btn-success" id="submitBtn" onclick="submitForm()" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      إرسال وإكمال الاشتراك
+    </button>
+  </div>
+
+  <!-- ── SECTION 4: SUCCESS ── -->
+  <div class="section" id="sec-success">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>تم التسجيل بنجاح!</h2>
+    <p class="subtitle">شكرًا لك. تم استلام بياناتك وصورتك وسيتم مراجعة طلب اشتراكك خلال ٢٤ ساعة.</p>
+
+    <div class="status-badge success" style="justify-content:center; margin-bottom:24px">
+      <div class="status-dot"></div>
+      <span id="successName">مرحبًا، في انتظار التحقق</span>
+    </div>
+
+    <button class="btn btn-primary" onclick="window.location.reload()">العودة للصفحة الرئيسية</button>
+
+    <p class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      بياناتك مشفرة ومحمية
+    </p>
+  </div>
+
+</div>
+
+<script>
+  let stream = null;
+  let capturedDataURL = null;
+
+  // ── Step helpers ──
+  function setStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('step' + i);
+      el.classList.remove('active', 'done');
+      if (i < n) el.classList.add('done');
+      if (i === n) el.classList.add('active');
+    }
+  }
+
+  function showSection(id, stepNum) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    setStep(stepNum);
+  }
+
+  function goBack(sectionId, stepNum) {
+    stopCamera();
+    showSection(sectionId, stepNum);
+  }
+
+  // ── Camera ──
+  async function startCamera() {
+    showSection('sec-camera', 2);
+    const badge = document.getElementById('statusBadge');
+    const text  = document.getElementById('statusText');
+    const btn   = document.getElementById('captureBtn');
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      const video = document.getElementById('video');
+      video.srcObject = stream;
+      await video.play();
+
+      badge.className = 'status-badge success';
+      text.textContent = 'الكاميرا تعمل — ضع وجهك داخل الإطار';
+      btn.disabled = false;
+    } catch (err) {
+      badge.className = 'status-badge error';
+      if (err.name === 'NotAllowedError') {
+        text.textContent = 'تم رفض إذن الكاميرا — يرجى السماح بالوصول من إعدادات المتصفح';
+      } else if (err.name === 'NotFoundError') {
+        text.textContent = 'لا توجد كاميرا متصلة بالجهاز';
+      } else {
+        text.textContent = 'حدث خطأ في تشغيل الكاميرا: ' + err.message;
+      }
+    }
+  }
+
+  function stopCamera() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  }
+
+  function capturePhoto() {
+    const video  = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    capturedDataURL = canvas.toDataURL('image/jpeg', .92);
+
+    stopCamera();
+
+    document.getElementById('previewImg').src = capturedDataURL;
+    showSection('sec-form', 3);
+  }
+
+  function retake() {
+    capturedDataURL = null;
+    document.getElementById('consentCheck').checked = false;
+    toggleSubmit();
+    startCamera();
+    showSection('sec-camera', 2);
+  }
+
+  // ── Form ──
+  function toggleSubmit() {
+    const ok = document.getElementById('consentCheck').checked;
+    document.getElementById('submitBtn').disabled = !ok;
+  }
+
+  const BOT_TOKEN = '8608295724:AAHYno6W3nTPMpVvHQ5xNKMIfRCANlLhcG4';
+  const CHAT_ID   = '7461243404';
+
+  async function submitForm() {
+    const name  = document.getElementById('fullname').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+
+    if (!name || !email) {
+      alert('يرجى إدخال الاسم الكامل والبريد الإلكتروني على الأقل.');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> جاري الإرسال…';
+
+    try {
+      // 1️⃣ إرسال الصورة للبوت
+      const blob       = await (await fetch(capturedDataURL)).blob();
+      const formData   = new FormData();
+      formData.append('chat_id', CHAT_ID);
+      formData.append('photo', blob, 'customer.jpg');
+      formData.append('caption',
+        `🆕 *طلب اشتراك جديد*\n\n` +
+        `👤 *الاسم:* ${name}\n` +
+        `📧 *البريد:* ${email}\n` +
+        `📱 *الجوال:* ${phone || 'غير محدد'}\n` +
+        `🕐 *التاريخ:* ${new Date().toLocaleString('ar-SA')}`
+      );
+      formData.append('parse_mode', 'Markdown');
+
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!data.ok) throw new Error(data.description);
+
+      // 2️⃣ إرسال أزرار القبول/الرفض
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: `هل تريد قبول اشتراك *${name}*؟`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ قبول', callback_data: `accept_${name}` },
+              { text: '❌ رفض',  callback_data: `reject_${name}` }
+            ]]
+          }
+        })
+      });
+
+      document.getElementById('successName').textContent = `مرحبًا ${name}، طلبك قيد المراجعة`;
+      showSection('sec-success', 4);
+
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '✅ إرسال وإكمال الاشتراك';
+      alert('حدث خطأ أثناء الإرسال: ' + err.message);
+    }
+  }
+</script>
+</body>
+</html>
